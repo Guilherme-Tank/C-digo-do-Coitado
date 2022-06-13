@@ -1,29 +1,33 @@
+//Bibliotecas utilizadas
 #include <AFMotor.h> //https://www.arduino.cc/reference/en/libraries/adafruit-motor-shield-library/
 #include <Servo.h>
 
+//Definicação dos pinos
 #define pinoLed 45
 #define pinoBuzzer 44
 #define pinoPot A15
 
-Servo servo;
+Servo servo; //Definicação do servo
+AF_DCMotor motor(3); // Definicação do motor
 
 const byte MAX_STRING_LEN = 9;
 char inputString[MAX_STRING_LEN];
 byte strLen = 0;
-int pot, value;
-
-AF_DCMotor motor(3);
+int pot, value, lastValor;
+//Variaveis globais utilizadas
 
 void setup() {
-  // put your setup code here, to run once:
+  //Comunicação Serial
   Serial.begin(9600);
   Serial1.begin(9600);
+  //Definição dos modos dos pinos
   pinMode(pinoLed, OUTPUT);
   pinMode(pinoBuzzer, OUTPUT);
   pinMode(pinoPot, INPUT);
-  servo.attach(9);
+  servo.attach(9); //Definicação do pino do PWM do Servo Motor
 }
 
+//Função para utilização dos valores X
 int valoresX(char string[]){
   int valor = 0, x=100, valorInt;
   char auxiliar;
@@ -34,11 +38,14 @@ int valoresX(char string[]){
     x/=10;
   }
   valor=map(valor, 0, 200, 50, 180);
-  servo.write(valor);
+  if(valor != lastValor)
+    servo.write(valor);
+  lastValor = valor;
   return valor;
   
 }
 
+//Função para utilização de valores Y
 void valoresY(char string[]){
   int valor = 0, x=100, valorInt;
   char auxiliar;
@@ -62,6 +69,7 @@ void valoresY(char string[]){
   }
 }
 
+//Função para utilização dos valores dos botões X e Quadrado
 void valoresBotao(char string[]){
   int valor = 0, valorInt, cont=0;
   char auxiliar;
@@ -69,60 +77,54 @@ void valoresBotao(char string[]){
     auxiliar = string[i];
     valorInt = auxiliar - '0';
     if ((valorInt==1)&&(cont==0)){
-      Serial.println("liga");
       digitalWrite(pinoLed, HIGH);
     }
     else if(cont == 0) {
-      Serial.println("desligado");
       digitalWrite(pinoLed, LOW);
     }
     else if((cont==1)&&(valorInt==1)){
       tone (pinoBuzzer, 400);
-      Serial.println("liga tone");
     }
     
     else{
       noTone (pinoBuzzer);
-      Serial.println("Desliga tone");
     }
     cont++;
   }
 
 }
 
- 
 void loop() {
-  // put your main code here, to run repeatedly:
   if (processSerial()) {
-    // Received a complete string. For now, just echo it back
-    Serial.println(inputString);
-    Serial.print(valoresX(inputString));
-    Serial.print(" - ");
-    valoresY(inputString);
-    valoresBotao(inputString);
-    inputString[0] = '\0';         // Make sure array is empty
-    strLen         = 0;            // reset length to zero
+    //Apos receber uma string completa
+    valoresY(inputString); //Função
+    valoresBotao(inputString); //Função
+    inputString[0] = '\0';         // Esvazia o array
+    strLen         = 0;            // Reseta o tamanho da string para zero
   }   
-  
+
+  //Escrevendo para Serial1 (teste)
   if(Serial.available()){
     Serial1.write(Serial.read());
   }
 }
- 
+
+//Função para ler uma string completa com um número de caracteres especifico
 boolean processSerial() {
   while (Serial1.available()) {
     char inChar = (char)Serial1.read(); 
  
-    // We are done receiving the string if we received a return (or line feed)
+    // Caso receba um return ou line feed, acabou a string
     if ((inChar == '\n') || (inChar == '\r'))
       return true;
  
-    // add it to the inputString if we have room
+    // Coloque na string caso ainda tenha espaço
     if (strLen < (MAX_STRING_LEN - 1)) {
       inputString[strLen++] = inChar;
       inputString[strLen]   = '\0';
     }
   }
- 
+
+  //Diz que o processo ainda não acabou, porque a string inteira ainda não foi recebida
   return false;
 }
